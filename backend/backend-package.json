@@ -1,0 +1,33 @@
+{
+  "name": "unlock-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --coverage",
+    "lint": "eslint src/",
+    "build": "echo 'Backend ready for deployment'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.0",
+    "pg": "^8.11.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.0",
+    "axios": "^1.6.0",
+    "@azure/identity": "^3.3.0",
+    "@azure/storage-blob": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "eslint": "^8.50.0",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

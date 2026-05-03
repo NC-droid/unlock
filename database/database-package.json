@@ -1,0 +1,20 @@
+{
+  "name": "unlock-database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "migrate:status": "node scripts/migration-status.js",
+    "migrate:up": "node scripts/migrate-up.js",
+    "migrate:down": "node scripts/migrate-down.js",
+    "seed": "node scripts/seed.js",
+    "test": "echo 'Database tests'"
+  },
+  "dependencies": {
+    "pg": "^8.11.0",
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "description": "UNLOCK PostgreSQL database migrations and seeds"
+}
