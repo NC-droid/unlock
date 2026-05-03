@@ -1,0 +1,92 @@
+name: Run Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'database/migrations/**'
+      - '.github/workflows/database-migrate.yml'
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: 'Rollback to previous migration'
+        required: false
+        default: 'false'
+
+env:
+  DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+  DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+  DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+  DATABASE_USER: ${{ secrets.DATABASE_USER }}
+  DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+  DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    name: Database Migrations
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'database/package-lock.json'
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Verify database connectivity
+        run: |
+          psql -h "$DATABASE_HOST" \
+            -U "$DATABASE_USER" \
+            -d "$DATABASE_NAME" \
+            -c "SELECT version();"
+        env:
+          PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      - name: Install migration tools
+        working-directory: ./database
+        run: npm ci
+
+      - name: Check pending migrations
+        working-directory: ./database
+        run: npm run migrate:status --if-present
+        continue-on-error: true
+
+      - name: Run migrations (forward)
+        if: github.event.inputs.rollback != 'true'
+        working-directory: ./database
+        run: npm run migrate:up --if-present
+        env:
+          NODE_ENV: production
+
+      - name: Seed database (if needed)
+        working-directory: ./database
+        run: npm run seed --if-present
+        continue-on-error: true
+
+      - name: Verify migration success
+        run: |
+          echo "Checking database tables..."
+          psql -h "$DATABASE_HOST" \
+            -U "$DATABASE_USER" \
+            -d "$DATABASE_NAME" \
+            -c "\dt"
+        env:
+          PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Database migrations completed successfully"
+
+      - name: Notify failure
+        if: failure()
+        run: echo "❌ Database migration failed - check logs above"
