@@ -120,6 +120,26 @@ export async function loginWithPopup(): Promise<{
   }
 }
 
+
+export async function loginWithSignupPopup(): Promise<{
+  accessToken: string;
+  account: AccountInfo;
+} | null> {
+  const msal = await getMsalInstance();
+  try {
+    // prompt: 'create' tells Entra External ID CIAM to go directly to sign-up
+    const response = await msal.loginPopup({
+      ...loginScopes,
+      prompt: 'create',
+    });
+    if (!response?.account) return null;
+    return { accessToken: response.accessToken, account: response.account };
+  } catch (error) {
+    console.error('[Auth] Sign-up popup failed:', error);
+    return null;
+  }
+}
+
 export async function logout(): Promise<void> {
   const msal    = await getMsalInstance();
   const account = await getCurrentAccount();
