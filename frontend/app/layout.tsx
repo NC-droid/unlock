@@ -1,0 +1,43 @@
+import type { Metadata } from 'next';
+import '@/styles/globals.css';
+import { ToastProvider } from '@/components/ui/Toast';
+
+// =============================================================================
+// Root Layout — shared across all pages
+// =============================================================================
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s | UNLOCK',
+    default:  'UNLOCK — Unlock Your Learning',
+  },
+  description:
+    'AI-powered study plans for NSW Year 7–10 students. Personalised to your NESA outcomes. Built to make studying actually work.',
+  keywords: ['NSW students', 'NESA', 'study plan', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'AI tutor'],
+  openGraph: {
+    title:       'UNLOCK — Unlock Your Learning',
+    description: 'AI-powered study plans for NSW Year 7–10 students.',
+    type:        'website',
+    locale:      'en_AU',
+  },
+  robots: {
+    index:  false, // Don't index during beta
+    follow: false,
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en-AU">
+      <body className="min-h-screen bg-[#FFFFFF] font-body antialiased">
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+      </body>
+    </html>
+  );
+}
