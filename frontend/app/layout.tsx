@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import '@/styles/globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 
@@ -21,16 +22,12 @@ export const metadata: Metadata = {
     locale:      'en_AU',
   },
   robots: {
-    index:  false, // Don't index during beta
+    index:  false,
     follow: false,
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-AU">
       <body className="min-h-screen bg-[#FFFFFF] font-body antialiased">
