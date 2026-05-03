@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'Sign In',
 };
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    // Two-column layout on desktop; single column on mobile
     <div className="min-h-screen flex">
       {/* Left: Hero panel (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#1A3A52] flex-col justify-between p-12">
