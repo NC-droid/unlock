@@ -14,19 +14,25 @@ const tenantName = process.env.NEXT_PUBLIC_AZURE_TENANT_NAME!;
 const tenantId   = process.env.NEXT_PUBLIC_AZURE_TENANT_ID!;
 const clientId   = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID!;
 
-// Entra External ID authority format
+// Entra External ID CIAM authority
 const authority = `https://${tenantName}.ciamlogin.com/${tenantId}`;
+
+// Use the app origin as redirect URI (works for popup auth)
+const redirectUri = typeof window !== 'undefined'
+  ? window.location.origin
+  : process.env.NEXT_PUBLIC_AZURE_REDIRECT_URI || 'https://lively-dune-00d7f1910.7.azurestaticapps.net';
 
 export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority,
-    redirectUri:            process.env.NEXT_PUBLIC_REDIRECT_URI || '/',
-    postLogoutRedirectUri:  '/',
+    knownAuthorities: [`${tenantName}.ciamlogin.com`], // Required for CIAM
+    redirectUri,
+    postLogoutRedirectUri: '/',
     navigateToLoginRequestUrl: false,
   },
   cache: {
-    cacheLocation:        'sessionStorage', // More secure than localStorage
+    cacheLocation:          'sessionStorage',
     storeAuthStateInCookie: false,
   },
   system: {
@@ -43,58 +49,44 @@ export const msalConfig: Configuration = {
 };
 
 // =============================================================================
-// Scopes — what we request from Azure
+// Scopes
 // =============================================================================
 export const loginScopes: PopupRequest = {
-  scopes: ['openid', 'profile', 'email', `${clientId}/.default`],
+  scopes: ['openid', 'profile', 'email'],
 };
 
 export const tokenScopes: SilentRequest = {
-  scopes: [`${clientId}/.default`],
-  account: undefined, // Will be filled at call time
+  scopes: ['openid', 'profile', 'email'],
+  account: undefined,
 };
 
 // =============================================================================
-// MSAL instance (singleton)
+// MSAL singleton
 // =============================================================================
 let msalInstance: PublicClientApplication | null = null;
 
 export async function getMsalInstance(): Promise<PublicClientApplication> {
   if (msalInstance) return msalInstance;
-
   msalInstance = new PublicClientApplication(msalConfig);
   await msalInstance.initialize();
-
-  // Handle redirect response on page load (if using redirect flow)
   await msalInstance.handleRedirectPromise().catch(console.error);
-
   return msalInstance;
 }
 
 // =============================================================================
-// Auth helper: get access token (silent, fallback to popup)
+// Auth helpers
 // =============================================================================
 export async function getAccessToken(): Promise<string | null> {
-  const msal = await getMsalInstance();
+  const msal    = await getMsalInstance();
   const accounts = msal.getAllAccounts();
-
   if (accounts.length === 0) return null;
-
   const account = accounts[0];
-
   try {
-    const response = await msal.acquireTokenSilent({
-      ...tokenScopes,
-      account,
-    });
+    const response = await msal.acquireTokenSilent({ ...tokenScopes, account });
     return response.accessToken;
   } catch {
-    // Silent acquisition failed — try popup
     try {
-      const response = await msal.acquireTokenPopup({
-        ...loginScopes,
-        account,
-      });
+      const response = await msal.acquireTokenPopup({ ...loginScopes, account });
       return response.accessToken;
     } catch {
       return null;
@@ -102,26 +94,17 @@ export async function getAccessToken(): Promise<string | null> {
   }
 }
 
-// =============================================================================
-// Auth helper: current account
-// =============================================================================
 export async function getCurrentAccount(): Promise<AccountInfo | null> {
-  const msal = await getMsalInstance();
+  const msal    = await getMsalInstance();
   const accounts = msal.getAllAccounts();
   return accounts[0] || null;
 }
 
-// =============================================================================
-// Auth helper: is logged in?
-// =============================================================================
 export async function isAuthenticated(): Promise<boolean> {
   const account = await getCurrentAccount();
   return account !== null;
 }
 
-// =============================================================================
-// Auth helper: login (popup)
-// =============================================================================
 export async function loginWithPopup(): Promise<{
   accessToken: string;
   account: AccountInfo;
@@ -130,31 +113,21 @@ export async function loginWithPopup(): Promise<{
   try {
     const response = await msal.loginPopup(loginScopes);
     if (!response?.account) return null;
-    return {
-      accessToken: response.accessToken,
-      account:     response.account,
-    };
+    return { accessToken: response.accessToken, account: response.account };
   } catch (error) {
     console.error('[Auth] Login popup failed:', error);
     return null;
   }
 }
 
-// =============================================================================
-// Auth helper: logout
-// =============================================================================
 export async function logout(): Promise<void> {
-  const msal  = await getMsalInstance();
+  const msal    = await getMsalInstance();
   const account = await getCurrentAccount();
-
-  await msal.logoutPopup({
-    account:              account || undefined,
-    postLogoutRedirectUri: '/',
-  });
+  await msal.logoutPopup({ account: account || undefined, postLogoutRedirectUri: '/' });
 }
 
 // =============================================================================
-// API client helper — fetch with Bearer token attached
+// API fetch helper
 // =============================================================================
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -162,29 +135,19 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<{ data?: T; error?: string; status: number }> {
-  const token = await getAccessToken();
-
+  const token   = await getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
-
+    const res  = await fetch(`${API_BASE}${path}`, { ...options, headers });
     const body = await res.json().catch(() => ({}));
-
     if (!res.ok) {
       return { error: body.message || body.error || 'Request failed', status: res.status };
     }
-
     return { data: body as T, status: res.status };
   } catch (err) {
     console.error('[apiFetch]', err);
