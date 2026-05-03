@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import '@/styles/design-system.css';
 import '@/styles/globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
-
-// =============================================================================
-// Root Layout — shared across all pages
-// =============================================================================
 
 export const metadata: Metadata = {
   title: {
@@ -21,10 +18,7 @@ export const metadata: Metadata = {
     type:        'website',
     locale:      'en_AU',
   },
-  robots: {
-    index:  false,
-    follow: false,
-  },
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
