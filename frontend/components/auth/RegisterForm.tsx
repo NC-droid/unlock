@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
-import { loginWithPopup, apiFetch } from '@/lib/auth';
+import { loginWithSignupPopup, apiFetch } from '@/lib/auth';
 
 // =============================================================================
 // UNLOCK RegisterForm
@@ -45,7 +45,7 @@ export default function RegisterForm() {
 
     try {
       // 1. Trigger Azure popup sign-up/sign-in
-      const result = await loginWithPopup();
+      const result = await loginWithSignupPopup();
 
       if (!result) {
         setErrors({ general: 'Hmm, sign-up was cancelled. Give it another try!' });
