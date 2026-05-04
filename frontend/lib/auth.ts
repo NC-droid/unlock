@@ -17,10 +17,11 @@ const clientId   = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID!;
 // Entra External ID CIAM authority
 const authority = `https://${tenantName}.ciamlogin.com/${tenantId}`;
 
-// Use the app origin as redirect URI (works for popup auth)
+// Use the app origin as redirect URI (works for popup auth).
+// Falls back to NEXT_PUBLIC_REDIRECT_URI env var (set in .env.local for dev).
 const redirectUri = typeof window !== 'undefined'
   ? window.location.origin
-  : process.env.NEXT_PUBLIC_AZURE_REDIRECT_URI || 'https://lively-dune-00d7f1910.7.azurestaticapps.net';
+  : process.env.NEXT_PUBLIC_REDIRECT_URI || 'https://lively-dune-00d7f1910.7.azurestaticapps.net';
 
 export const msalConfig: Configuration = {
   auth: {
@@ -115,11 +116,10 @@ export async function loginWithPopup(): Promise<{
     if (!response?.account) return null;
     return { accessToken: response.accessToken, account: response.account };
   } catch (error) {
-    console.error('[Auth] Login popup failed:', error);
-    return null;
+    // Re-throw so the caller (LoginForm) can handle specific MSAL error codes
+    throw error;
   }
 }
-
 
 export async function loginWithSignupPopup(): Promise<{
   accessToken: string;
@@ -135,8 +135,7 @@ export async function loginWithSignupPopup(): Promise<{
     if (!response?.account) return null;
     return { accessToken: response.accessToken, account: response.account };
   } catch (error) {
-    console.error('[Auth] Sign-up popup failed:', error);
-    return null;
+    throw error;
   }
 }
 

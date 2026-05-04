@@ -11,6 +11,10 @@ import { loginWithPopup, isAuthenticated } from '@/lib/auth';
 // Uses Azure Entra External ID popup flow for sign-in
 // =============================================================================
 
+// MSAL error codes we handle explicitly
+const POPUP_BLOCKED  = 'popup_window_error';
+const USER_CANCELLED = 'user_cancelled';
+
 export default function LoginForm() {
   const router = useRouter();
   const { success, error: showError } = useToast();
@@ -23,7 +27,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      // Check if already logged in
+      // Check if already logged in — keep spinner active during navigation
       const alreadyAuth = await isAuthenticated();
       if (alreadyAuth) {
         router.push('/dashboard');
@@ -34,16 +38,34 @@ export default function LoginForm() {
       const result = await loginWithPopup();
 
       if (!result) {
-        setErrorMsg('Oops! That didn\'t work. Give it another try?');
+        setErrorMsg("Oops! That didn't work. Give it another try?");
         setLoading(false);
         return;
       }
 
-      success(`Welcome back! 👋`);
+      success('Welcome back! 👋');
       router.push('/dashboard');
-    } catch (err) {
+      // loading stays true intentionally — spinner persists during navigation
+    } catch (err: any) {
       console.error('[LoginForm]', err);
-      showError('Something unexpected happened. Please try again.');
+
+      const code: string = err?.errorCode ?? err?.name ?? '';
+
+      if (code === USER_CANCELLED) {
+        // User deliberately closed the popup — silently reset, no error shown
+        setLoading(false);
+        return;
+      }
+
+      if (code === POPUP_BLOCKED) {
+        setErrorMsg(
+          'Your browser blocked the sign-in popup. ' +
+          'Please allow popups for this site and try again.'
+        );
+      } else {
+        showError('Something unexpected happened. Please try again.');
+      }
+
       setLoading(false);
     }
   }
@@ -61,7 +83,7 @@ export default function LoginForm() {
 
       {/* Sign in info */}
       <p className="text-[#666666] text-sm text-center leading-relaxed">
-        You&apos;ll sign in securely through your school or personal account.
+        You&apos;ll sign in securely through your school or personal Microsoft account.
         <br />No password to remember here!
       </p>
 
