@@ -30,12 +30,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'backend/package-lock.json'
 
       - name: Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
 
       - name: Run linting
         working-directory: ./backend
@@ -49,17 +47,13 @@ jobs:
 
       - name: Build backend
         working-directory: ./backend
-        run: npm run build --if-present
+        run: npm run build
         env:
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+          DATABASE_URL:                    ${{ secrets.DATABASE_URL }}
+          AZURE_TENANT_ID:                 ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID:                 ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_NAME:               ${{ secrets.AZURE_TENANT_NAME }}
+          AZURE_STORAGE_ACCOUNT_NAME:      ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
 
       - name: Deploy to Azure App Service
