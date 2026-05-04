@@ -12,6 +12,10 @@ import { loginWithSignupPopup, apiFetch } from '@/lib/auth';
 // Uses Azure Entra External ID popup flow for sign-up
 // =============================================================================
 
+// MSAL error codes we handle explicitly
+const POPUP_BLOCKED  = 'popup_window_error';
+const USER_CANCELLED = 'user_cancelled';
+
 interface FormErrors {
   general?: string;
   terms?:   string;
@@ -24,9 +28,6 @@ export default function RegisterForm() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading]             = useState(false);
   const [errors, setErrors]               = useState<FormErrors>({});
-
-  // Azure Entra External ID handles email/password fields in its popup
-  // Our job: trigger the popup, then register the user in our DB
 
   async function handleSignUp() {
     const newErrors: FormErrors = {};
@@ -48,34 +49,64 @@ export default function RegisterForm() {
       const result = await loginWithSignupPopup();
 
       if (!result) {
-        setErrors({ general: 'Hmm, sign-up was cancelled. Give it another try!' });
+        setErrors({ general: "Hmm, sign-up was cancelled. Give it another try!" });
         setLoading(false);
         return;
       }
 
       // 2. Register user in our database
-      const { error: apiError } = await apiFetch('/api/users/register', {
+      const { error: apiError, status } = await apiFetch('/api/users/register', {
         method: 'POST',
         body: JSON.stringify({
-          name:  result.account.name || '',
-          email: result.account.username,
+          name:            result.account.name || '',
+          email:           result.account.username,
           parentalConsent: false, // TODO: add parental consent flow for under-13s
         }),
       });
 
       if (apiError) {
-        showError(`Something went wrong: ${apiError}`);
+        if (status === 0) {
+          // Network error: Azure account was created successfully, but our
+          // backend server is unreachable. Show a clear, honest message so
+          // the student isn't confused — they can sign in once the server is up.
+          setErrors({
+            general:
+              "Your Microsoft account was created successfully! ✅ " +
+              "We're having a little trouble reaching our server right now. " +
+              "Please try signing in in a few minutes — your account will be ready.",
+          });
+        } else {
+          showError(`Something went wrong setting up your profile: ${apiError}`);
+        }
         setLoading(false);
         return;
       }
 
-      success('Welcome to UNLOCK! 🎉 Let\'s set up your profile.');
+      success("Welcome to UNLOCK! 🎉 Let’s set up your profile.");
 
-      // 3. Redirect to onboarding
+      // 3. Redirect to onboarding — loading stays true during navigation
       router.push('/onboarding');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[RegisterForm]', err);
-      showError('Something unexpected happened. Please try again.');
+
+      const code: string = err?.errorCode ?? err?.name ?? '';
+
+      if (code === USER_CANCELLED) {
+        // User deliberately closed the popup — silently reset, no error shown
+        setLoading(false);
+        return;
+      }
+
+      if (code === POPUP_BLOCKED) {
+        setErrors({
+          general:
+            'Your browser blocked the sign-up popup. ' +
+            'Please allow popups for this site and try again.',
+        });
+      } else {
+        showError('Something unexpected happened. Please try again.');
+      }
+
       setLoading(false);
     }
   }
