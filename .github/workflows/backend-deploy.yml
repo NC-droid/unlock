@@ -13,10 +13,6 @@ on:
     paths:
       - 'backend/**'
 
-env:
-  AZURE_APP_SERVICE_NAME: ${{ secrets.AZURE_APP_SERVICE_NAME }}
-  NODE_ENV: production
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -31,9 +27,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
+      - name: Install dependencies (including devDependencies for TypeScript build)
         working-directory: ./backend
         run: npm install
+        env:
+          NODE_ENV: development
 
       - name: Run linting
         working-directory: ./backend
@@ -49,6 +47,7 @@ jobs:
         working-directory: ./backend
         run: npm run build
         env:
+          NODE_ENV: production
           DATABASE_URL:                    ${{ secrets.DATABASE_URL }}
           AZURE_TENANT_ID:                 ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID:                 ${{ secrets.AZURE_CLIENT_ID }}
@@ -64,7 +63,8 @@ jobs:
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: './backend'
 
-      - name: Print deployment info
+      - name: Verify deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           echo "Backend API deployed to:"
           echo "https://${{ secrets.AZURE_APP_SERVICE_NAME }}.azurewebsites.net"
