@@ -25,7 +25,7 @@ async function start() {
   const shutdown = (signal: string) => {
     console.log(`[Server] ${signal} received — shutting down gracefully...`);
     server.close(async () => {
-      const { pool } = await import('./services/db');
+      const { pool } = await import('./services/db.js');
       await pool.end();
       console.log('[Server] 👋 Goodbye');
       process.exit(0);
