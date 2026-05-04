@@ -10,6 +10,7 @@ async function start() {
   const dbOk = await checkDbConnection();
   if (!dbOk) {
     console.error('[Server] ❌ Cannot connect to database. Check DATABASE_URL in .env');
+    console.error('[Server] Ensure the DATABASE_URL secret is set in Azure App Service configuration.');
     process.exit(1);
   }
   console.log('[Server] ✅ Database connected');
