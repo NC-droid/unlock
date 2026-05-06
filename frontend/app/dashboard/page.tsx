@@ -189,10 +189,10 @@ export default function DashboardPage() {
           <CardBody>
             <p className="mb-4">
               We&apos;re getting your personalised study plan ready.
-              In the meantime, why not take a diagnostic quiz to help us understand your strengths?
+              Diagnostic quizzes and your AI study plan will be available in Week 2.
             </p>
-            <Button variant="primary" onClick={() => router.push('/quizzes')}>
-              Take Diagnostic Quiz →
+            <Button variant="primary" disabled className="opacity-50 cursor-not-allowed">
+              Take Diagnostic Quiz → (Coming Week 2)
             </Button>
           </CardBody>
         </Card>
@@ -275,3 +275,4 @@ function TopNav({ name, xp, level, onLogout, logoutLoading, loading }: TopNavPro
     </nav>
   );
 }
+
