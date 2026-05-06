@@ -5,14 +5,14 @@
 -- =============================================================================
 
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- For text search on resources
+-- pg_trgm: enable via Azure Portal (Server parameters -> azure.extensions -> add PG_TRGM) then uncomment:
+-- CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- =============================================================================
 -- 1. USERS
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS users (
-  user_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   azure_user_id   VARCHAR(255) UNIQUE NOT NULL,  -- Azure Entra External ID object ID
   email           VARCHAR(255) UNIQUE NOT NULL,
   name            VARCHAR(255),
@@ -52,7 +52,7 @@ CREATE INDEX idx_nesa_year_subj   ON nesa_outcomes(year, subject);
 -- 3. STUDY PLANS
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS study_plans (
-  plan_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  plan_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   week_number   SMALLINT NOT NULL CHECK (week_number BETWEEN 1 AND 52),
   -- JSON: [{day:"Monday", tasks:[{subject, topic, outcome_id, estimated_minutes},...]}]
@@ -70,7 +70,7 @@ CREATE INDEX idx_study_plans_user_week  ON study_plans(user_id, week_number);
 -- 4. QUIZZES  (topic-level bank; diagnostic quizzes share same structure)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS quizzes (
-  quiz_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quiz_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title           VARCHAR(200) NOT NULL,
   subject         VARCHAR(50) NOT NULL,
   topic           VARCHAR(100) NOT NULL,
@@ -91,7 +91,7 @@ CREATE INDEX idx_quizzes_type       ON quizzes(quiz_type);
 -- 5. QUIZ QUESTIONS
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS quiz_questions (
-  question_id     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  question_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   quiz_id         UUID NOT NULL REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
   question_order  SMALLINT NOT NULL,
   question_text   TEXT NOT NULL,
@@ -110,7 +110,7 @@ CREATE INDEX idx_questions_quiz ON quiz_questions(quiz_id);
 -- 6. STUDENT QUIZ RESULTS
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS student_quiz_results (
-  result_id     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  result_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   quiz_id       UUID NOT NULL REFERENCES quizzes(quiz_id),
   -- JSON: [{question_id, student_answer, correct_answer, is_correct, outcome_id}]
@@ -130,7 +130,7 @@ CREATE INDEX idx_quiz_results_user_quiz ON student_quiz_results(user_id, quiz_id
 -- 7. DOCUMENTS (Student exam/assignment uploads)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS documents (
-  document_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   original_filename VARCHAR(255) NOT NULL,
   blob_url          TEXT NOT NULL,  -- Azure Blob Storage URL
@@ -156,7 +156,7 @@ CREATE INDEX idx_documents_status ON documents(analysis_status);
 -- 8. STUDENT PROGRESS (Per-subject mastery)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS student_progress (
-  progress_id     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  progress_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   subject         VARCHAR(50) NOT NULL,
   mastery_percent SMALLINT NOT NULL DEFAULT 0 CHECK (mastery_percent BETWEEN 0 AND 100),
@@ -172,7 +172,7 @@ CREATE INDEX idx_progress_user ON student_progress(user_id);
 -- 9. GAMIFICATION (XP, streaks, badges, levels)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS gamification (
-  game_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  game_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
   xp_total        INTEGER NOT NULL DEFAULT 0 CHECK (xp_total >= 0),
   current_streak  SMALLINT NOT NULL DEFAULT 0,
@@ -190,7 +190,7 @@ CREATE INDEX idx_gamification_user ON gamification(user_id);
 -- 10. PARENT ACCOUNTS
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS parent_accounts (
-  parent_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parent_email      VARCHAR(255),
   linked_student_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   session_token     VARCHAR(255) UNIQUE NOT NULL,  -- One-time use magic link token
@@ -206,7 +206,7 @@ CREATE INDEX idx_parent_token   ON parent_accounts(session_token);
 -- 11. STUDY TASK COMPLETIONS (tracks which daily tasks are done)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS task_completions (
-  completion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  completion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   plan_id       UUID NOT NULL REFERENCES study_plans(plan_id) ON DELETE CASCADE,
   -- Identifies the specific task within the plan's JSON tasks array
@@ -222,7 +222,7 @@ CREATE INDEX idx_completions_plan ON task_completions(plan_id);
 -- 12. RESOURCES (Hardcoded NSW Tier 1/2 learning resources)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS resources (
-  resource_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  resource_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title         VARCHAR(255) NOT NULL,
   source        VARCHAR(100) NOT NULL,  -- e.g. "Khan Academy", "NESA", "ABC Education"
   url           TEXT NOT NULL,
@@ -242,7 +242,7 @@ CREATE INDEX idx_resources_title   ON resources USING gin(to_tsvector('english',
 -- 13. AUDIT LOG (for debugging and compliance)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS audit_log (
-  log_id      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  log_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID REFERENCES users(user_id) ON DELETE SET NULL,
   action      VARCHAR(100) NOT NULL,  -- e.g. "register", "login", "quiz_submit"
   details     JSONB DEFAULT '{}',
@@ -478,3 +478,4 @@ FROM new_quiz,
    'Start at −4 and add 9: −4 + 9 = 5. The temperature is now 5°C.',
    'NESA_MATH_7_1_1')
 ) AS q(question_order, question_text, question_type, options, correct_answer, explanation, nesa_outcome_id);
+
