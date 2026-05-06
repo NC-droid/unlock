@@ -12,6 +12,7 @@ on:
       - main
     paths:
       - 'backend/**'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -56,7 +57,7 @@ jobs:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
 
       - name: Deploy to Azure App Service
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.AZURE_APP_SERVICE_NAME }}
@@ -64,7 +65,7 @@ jobs:
           package: './backend'
 
       - name: Verify deployment
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           echo "Backend API deployed to:"
           echo "https://${{ secrets.AZURE_APP_SERVICE_NAME }}.azurewebsites.net"
