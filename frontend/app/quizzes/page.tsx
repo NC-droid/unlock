@@ -152,7 +152,7 @@ export default function QuizzesPage() {
                   variant="default"
                   padding="md"
                   className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/quizzes/${quiz.quizId}`)}
+                  onClick={() => router.push(`/quizzes/take?id=${quiz.quizId}`)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -187,7 +187,7 @@ export default function QuizzesPage() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/quizzes/${quiz.quizId}`);
+                          router.push(`/quizzes/take?id=${quiz.quizId}`);
                         }}
                         className="whitespace-nowrap"
                       >
