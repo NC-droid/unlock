@@ -183,25 +183,42 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* What's coming next */}
-        <Card variant="outlined" padding="md">
-          <CardTitle className="text-[#00A8A8] mb-1">📚 Your Study Plan is Coming!</CardTitle>
-          <CardBody>
-            <p className="mb-4">
-              We&apos;re getting your personalised study plan ready.
-              Diagnostic quizzes and your AI study plan will be available in Week 2.
-            </p>
-            <Button variant="primary" disabled className="opacity-50 cursor-not-allowed">
-              Take Diagnostic Quiz → (Coming Week 2)
-            </Button>
-          </CardBody>
-        </Card>
+        {/* Week 2 action cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card variant="outlined" padding="md" className="border-[#00A8A8]/40 bg-[#00A8A8]/5">
+            <div className="flex gap-3 items-start">
+              <span className="text-3xl flex-shrink-0" aria-hidden="true">🎯</span>
+              <div className="flex-1">
+                <h4 className="font-heading font-semibold text-[#1A3A52] text-sm mb-1">Diagnostic Quizzes</h4>
+                <p className="text-xs text-[#666666] mb-3">
+                  Test your knowledge and help us personalise your study plan.
+                </p>
+                <Button variant="primary" size="sm" onClick={() => router.push('/quizzes')}>
+                  Take a Quiz →
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="outlined" padding="md" className="border-[#FFB81C]/40 bg-[#FFB81C]/5">
+            <div className="flex gap-3 items-start">
+              <span className="text-3xl flex-shrink-0" aria-hidden="true">🗓</span>
+              <div className="flex-1">
+                <h4 className="font-heading font-semibold text-[#1A3A52] text-sm mb-1">Weekly Study Plan</h4>
+                <p className="text-xs text-[#666666] mb-3">
+                  AI-generated plan tailored to your subjects and strengths.
+                </p>
+                <Button variant="secondary" size="sm" onClick={() => router.push('/study-plan')}>
+                  View Plan →
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Coming soon features */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
-            { icon: '🗓', title: 'Study Plan',    desc: 'AI-generated weekly plan. Coming Week 2.' },
-            { icon: '📝', title: 'Practice Quizzes', desc: 'Test your knowledge. Coming Week 2.' },
             { icon: '📄', title: 'Upload Results', desc: 'Analyse your exam papers. Coming Week 3.' },
             { icon: '📊', title: 'Full Dashboard', desc: 'Track all progress. Coming Week 4.' },
           ].map(({ icon, title, desc }) => (
@@ -275,4 +292,3 @@ function TopNav({ name, xp, level, onLogout, logoutLoading, loading }: TopNavPro
     </nav>
   );
 }
-

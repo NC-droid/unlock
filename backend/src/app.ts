@@ -5,7 +5,9 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
 // Routes
-import usersRouter from './routes/users';
+import usersRouter      from './routes/users';
+import quizzesRouter    from './routes/quizzes';
+import studyPlansRouter from './routes/study-plans';
 
 // =============================================================================
 // Express Application Setup
@@ -92,7 +94,7 @@ app.use('/api/users/register', authLimiter);
 // =============================================================================
 
 app.get('/health', async (_req: Request, res: Response) => {
-  const { checkDbConnection } = await import('./services/db.js');
+  const { checkDbConnection } = await import('./services/db');
   const dbOk = await checkDbConnection();
   res.json({
     status: dbOk ? 'ok' : 'degraded',
@@ -104,11 +106,9 @@ app.get('/health', async (_req: Request, res: Response) => {
   });
 });
 
-app.use('/api/users', usersRouter);
-
-// Placeholder routes — implemented in Weeks 2–5
-app.use('/api/study-plans', (_req, res) => res.status(501).json({ message: 'Coming in Week 2' }));
-app.use('/api/quizzes',     (_req, res) => res.status(501).json({ message: 'Coming in Week 2' }));
+app.use('/api/users',       usersRouter);
+app.use('/api/quizzes',     quizzesRouter);
+app.use('/api/study-plans', studyPlansRouter);
 app.use('/api/documents',   (_req, res) => res.status(501).json({ message: 'Coming in Week 3' }));
 app.use('/api/progress',    (_req, res) => res.status(501).json({ message: 'Coming in Week 4' }));
 app.use('/api/resources',   (_req, res) => res.status(501).json({ message: 'Coming in Week 5' }));
