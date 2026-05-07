@@ -17,12 +17,17 @@ const clientId   = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID!;
 // Entra External ID authority format
 const authority = `https://${tenantName}.ciamlogin.com/${tenantId}`;
 
+// Use origin (no path) as redirect URI — this matches what's registered in Azure
+const redirectUri = typeof window !== 'undefined'
+  ? window.location.origin
+  : process.env.NEXT_PUBLIC_REDIRECT_URI || 'https://lively-dune-00d7f1910.7.azurestaticapps.net';
+
 export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority,
     knownAuthorities:       [`${tenantName}.ciamlogin.com`], // Required for CIAM endpoint discovery
-    redirectUri:            process.env.NEXT_PUBLIC_REDIRECT_URI || '/',
+    redirectUri,
     postLogoutRedirectUri:  '/',
     navigateToLoginRequestUrl: false,
   },
