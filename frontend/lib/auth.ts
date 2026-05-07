@@ -46,11 +46,11 @@ export const msalConfig: Configuration = {
 // Scopes — what we request from Azure
 // =============================================================================
 export const loginScopes: PopupRequest = {
-  scopes: ['openid', 'profile', 'email', `${clientId}/.default`],
+  scopes: ['openid', 'profile', 'email'],
 };
 
 export const tokenScopes: SilentRequest = {
-  scopes: [`${clientId}/.default`],
+  scopes: ['openid', 'profile', 'email'],
   account: undefined, // Will be filled at call time
 };
 
@@ -190,14 +190,20 @@ export async function apiFetch<T>(
 ): Promise<{ data?: T; error?: string; status: number }> {
   const token = await getAccessToken();
 
+  // No token means session expired — redirect to login
+  if (!token) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    }
+    return { error: 'Session expired. Redirecting to login…', status: 401 };
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  headers['Authorization'] = `Bearer ${token}`;
 
   try {
     const res = await fetch(`${API_BASE}${path}`, {
