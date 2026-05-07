@@ -21,6 +21,7 @@ export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority,
+    knownAuthorities:       [`${tenantName}.ciamlogin.com`], // Required for CIAM endpoint discovery
     redirectUri:            process.env.NEXT_PUBLIC_REDIRECT_URI || '/',
     postLogoutRedirectUri:  '/',
     navigateToLoginRequestUrl: false,
