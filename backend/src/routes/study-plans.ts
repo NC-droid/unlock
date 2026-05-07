@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
-import { query, withTransaction } from '../services/db';
-import { requireAuth } from '../middleware/auth';
+import { query, withTransaction } from '../services/db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 

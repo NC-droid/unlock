@@ -1,7 +1,7 @@
 // Deploy trigger: 2026-05-06T07:58:56Z
 import 'dotenv/config';
-import app from './app';
-import { checkDbConnection } from './services/db';
+import app from './app.js';
+import { checkDbConnection } from './services/db.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 

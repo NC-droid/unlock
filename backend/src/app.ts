@@ -5,9 +5,9 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
 // Routes
-import usersRouter      from './routes/users';
-import quizzesRouter    from './routes/quizzes';
-import studyPlansRouter from './routes/study-plans';
+import usersRouter      from './routes/users.js';
+import quizzesRouter    from './routes/quizzes.js';
+import studyPlansRouter from './routes/study-plans.js';
 
 // =============================================================================
 // Express Application Setup
