@@ -133,12 +133,36 @@ export async function loginWithPopup(): Promise<{
     const response = await msal.loginPopup(loginScopes);
     if (!response?.account) return null;
     return {
-      accessToken: response.accessToken,
+      accessToken: response.accessToken || response.idToken,
       account:     response.account,
     };
   } catch (error) {
-    console.error('[Auth] Login popup failed:', error);
-    return null;
+    // Re-throw so the caller (LoginForm) can handle specific MSAL error codes
+    throw error;
+  }
+}
+
+// =============================================================================
+// Auth helper: register via signup popup
+// =============================================================================
+export async function loginWithSignupPopup(): Promise<{
+  accessToken: string;
+  account: AccountInfo;
+} | null> {
+  const msal = await getMsalInstance();
+  try {
+    // prompt: 'create' tells Entra External ID CIAM to go directly to sign-up
+    const response = await msal.loginPopup({
+      ...loginScopes,
+      prompt: 'create',
+    });
+    if (!response?.account) return null;
+    return {
+      accessToken: response.accessToken || response.idToken,
+      account:     response.account,
+    };
+  } catch (error) {
+    throw error;
   }
 }
 
