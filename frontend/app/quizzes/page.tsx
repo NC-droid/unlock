@@ -67,9 +67,9 @@ export default function QuizzesPage() {
       const auth = await isAuthenticated();
       if (!auth) { router.replace('/auth/login'); return; }
 
-      const { data, error: err } = await apiFetch<{ quizzes: Quiz[] }>('/api/quizzes');
+      const { data, error: err, status } = await apiFetch<{ quizzes: Quiz[] }>('/api/quizzes');
       if (err || !data) {
-        setError('Could not load quizzes. Please try again.');
+        setError(`Error ${status}: ${err ?? 'No data returned'}`);
       } else {
         setQuizzes(data.quizzes);
       }
