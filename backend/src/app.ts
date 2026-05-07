@@ -94,7 +94,7 @@ app.use('/api/users/register', authLimiter);
 // =============================================================================
 
 app.get('/health', async (_req: Request, res: Response) => {
-  const { checkDbConnection } = await import('./services/db');
+  const { checkDbConnection } = await import('./services/db.js');
   const dbOk = await checkDbConnection();
   res.json({
     status: dbOk ? 'ok' : 'degraded',
