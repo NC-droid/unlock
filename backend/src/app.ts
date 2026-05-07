@@ -34,7 +34,7 @@ app.use(helmet({
 // ---------------------------------------------------------------------------
 // CORS — Only allow our frontend origins
 // ---------------------------------------------------------------------------
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://lively-dune-00d7f1910.7.azurestaticapps.net')
   .split(',')
   .map((o) => o.trim());
 
