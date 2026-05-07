@@ -14,26 +14,19 @@ const tenantName = process.env.NEXT_PUBLIC_AZURE_TENANT_NAME!;
 const tenantId   = process.env.NEXT_PUBLIC_AZURE_TENANT_ID!;
 const clientId   = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID!;
 
-// Entra External ID CIAM authority
+// Entra External ID authority format
 const authority = `https://${tenantName}.ciamlogin.com/${tenantId}`;
-
-// Use the app origin as redirect URI (works for popup auth).
-// Falls back to NEXT_PUBLIC_REDIRECT_URI env var (set in .env.local for dev).
-const redirectUri = typeof window !== 'undefined'
-  ? window.location.origin
-  : process.env.NEXT_PUBLIC_REDIRECT_URI || 'https://lively-dune-00d7f1910.7.azurestaticapps.net';
 
 export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority,
-    knownAuthorities: [`${tenantName}.ciamlogin.com`], // Required for CIAM
-    redirectUri,
-    postLogoutRedirectUri: '/',
+    redirectUri:            process.env.NEXT_PUBLIC_REDIRECT_URI || '/',
+    postLogoutRedirectUri:  '/',
     navigateToLoginRequestUrl: false,
   },
   cache: {
-    cacheLocation:          'sessionStorage',
+    cacheLocation:        'sessionStorage', // More secure than localStorage
     storeAuthStateInCookie: false,
   },
   system: {
@@ -50,62 +43,87 @@ export const msalConfig: Configuration = {
 };
 
 // =============================================================================
-// Scopes
+// Scopes — what we request from Azure
 // =============================================================================
 export const loginScopes: PopupRequest = {
-  scopes: ['openid', 'profile', 'email'],
+  scopes: ['openid', 'profile', 'email', `${clientId}/.default`],
 };
 
 export const tokenScopes: SilentRequest = {
-  scopes: ['openid', 'profile', 'email'],
-  account: undefined,
+  scopes: [`${clientId}/.default`],
+  account: undefined, // Will be filled at call time
 };
 
 // =============================================================================
-// MSAL singleton
+// MSAL instance (singleton)
 // =============================================================================
 let msalInstance: PublicClientApplication | null = null;
 
 export async function getMsalInstance(): Promise<PublicClientApplication> {
   if (msalInstance) return msalInstance;
+
   msalInstance = new PublicClientApplication(msalConfig);
   await msalInstance.initialize();
+
+  // Handle redirect response on page load (if using redirect flow)
   await msalInstance.handleRedirectPromise().catch(console.error);
+
   return msalInstance;
 }
 
 // =============================================================================
-// Auth helpers
+// Auth helper: get access token (silent, fallback to popup)
 // =============================================================================
 export async function getAccessToken(): Promise<string | null> {
-  const msal    = await getMsalInstance();
+  const msal = await getMsalInstance();
   const accounts = msal.getAllAccounts();
+
   if (accounts.length === 0) return null;
+
   const account = accounts[0];
+
   try {
-    const response = await msal.acquireTokenSilent({ ...tokenScopes, account });
-    return response.accessToken;
+    const response = await msal.acquireTokenSilent({
+      ...tokenScopes,
+      account,
+    });
+    // For CIAM with OIDC scopes, accessToken may be empty — fall back to idToken
+    // which carries aud=clientId that our backend validates against
+    return response.accessToken || response.idToken || null;
   } catch {
+    // Silent acquisition failed — try popup
     try {
-      const response = await msal.acquireTokenPopup({ ...loginScopes, account });
-      return response.accessToken;
+      const response = await msal.acquireTokenPopup({
+        ...loginScopes,
+        account,
+      });
+      return response.accessToken || response.idToken || null;
     } catch {
       return null;
     }
   }
 }
 
+// =============================================================================
+// Auth helper: current account
+// =============================================================================
 export async function getCurrentAccount(): Promise<AccountInfo | null> {
-  const msal    = await getMsalInstance();
+  const msal = await getMsalInstance();
   const accounts = msal.getAllAccounts();
   return accounts[0] || null;
 }
 
+// =============================================================================
+// Auth helper: is logged in?
+// =============================================================================
 export async function isAuthenticated(): Promise<boolean> {
   const account = await getCurrentAccount();
   return account !== null;
 }
 
+// =============================================================================
+// Auth helper: login (popup)
+// =============================================================================
 export async function loginWithPopup(): Promise<{
   accessToken: string;
   account: AccountInfo;
@@ -114,39 +132,31 @@ export async function loginWithPopup(): Promise<{
   try {
     const response = await msal.loginPopup(loginScopes);
     if (!response?.account) return null;
-    return { accessToken: response.accessToken, account: response.account };
+    return {
+      accessToken: response.accessToken,
+      account:     response.account,
+    };
   } catch (error) {
-    // Re-throw so the caller (LoginForm) can handle specific MSAL error codes
-    throw error;
+    console.error('[Auth] Login popup failed:', error);
+    return null;
   }
-}
-
-export async function loginWithSignupPopup(): Promise<{
-  accessToken: string;
-  account: AccountInfo;
-} | null> {
-  const msal = await getMsalInstance();
-  try {
-    // prompt: 'create' tells Entra External ID CIAM to go directly to sign-up
-    const response = await msal.loginPopup({
-      ...loginScopes,
-      prompt: 'create',
-    });
-    if (!response?.account) return null;
-    return { accessToken: response.accessToken, account: response.account };
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function logout(): Promise<void> {
-  const msal    = await getMsalInstance();
-  const account = await getCurrentAccount();
-  await msal.logoutPopup({ account: account || undefined, postLogoutRedirectUri: '/' });
 }
 
 // =============================================================================
-// API fetch helper
+// Auth helper: logout
+// =============================================================================
+export async function logout(): Promise<void> {
+  const msal  = await getMsalInstance();
+  const account = await getCurrentAccount();
+
+  await msal.logoutPopup({
+    account:              account || undefined,
+    postLogoutRedirectUri: '/',
+  });
+}
+
+// =============================================================================
+// API client helper — fetch with Bearer token attached
 // =============================================================================
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -154,19 +164,29 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<{ data?: T; error?: string; status: number }> {
-  const token   = await getAccessToken();
+  const token = await getAccessToken();
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
-    const res  = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+    });
+
     const body = await res.json().catch(() => ({}));
+
     if (!res.ok) {
       return { error: body.message || body.error || 'Request failed', status: res.status };
     }
+
     return { data: body as T, status: res.status };
   } catch (err) {
     console.error('[apiFetch]', err);
