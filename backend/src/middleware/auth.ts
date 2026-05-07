@@ -16,8 +16,13 @@ if (!tenantId || !tenantName || !clientId) {
 }
 
 // Azure Entra External ID JWKS endpoint
-// For Entra External ID (CIAM): https://{tenantName}.ciamlogin.com/{tenantId}/discovery/v2.0/keys
+// CIAM JWKS is served via tenantName subdomain
 const jwksUri = `https://${tenantName}.ciamlogin.com/${tenantId}/discovery/v2.0/keys`;
+
+// CIAM token issuer uses tenantId as subdomain (not tenantName):
+// https://{tenantId}.ciamlogin.com/{tenantId}/v2.0
+// Verified via: https://{tenantName}.ciamlogin.com/{tenantId}/v2.0/.well-known/openid-configuration
+const tokenIssuer = `https://${tenantId}.ciamlogin.com/${tenantId}/v2.0`;
 
 const client = jwksClient({
   jwksUri,
@@ -75,7 +80,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     {
       algorithms: ['RS256'],
       audience: clientId,
-      issuer: `https://${tenantName}.ciamlogin.com/${tenantId}/v2.0`,
+      issuer: tokenIssuer,
     },
     (err, decoded) => {
       if (err) {
@@ -117,7 +122,7 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction): v
     {
       algorithms: ['RS256'],
       audience: clientId,
-      issuer: `https://${tenantName}.ciamlogin.com/${tenantId}/v2.0`,
+      issuer: tokenIssuer,
     },
     (err, decoded) => {
       if (!err && decoded) {
