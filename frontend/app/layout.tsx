@@ -1,4 +1,4 @@
-// rebuilt 2026-05-07b
+// rebuilt 2026-05-07c
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@/styles/design-system.css';
