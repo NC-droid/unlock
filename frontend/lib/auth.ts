@@ -95,7 +95,9 @@ export async function getAccessToken(): Promise<string | null> {
     });
     // For CIAM with OIDC scopes, accessToken may be empty — fall back to idToken
     // which carries aud=clientId that our backend validates against
-    return response.accessToken || response.idToken || null;
+    // Prefer idToken — for OIDC scopes, accessToken is for MS Graph (wrong audience)
+    // idToken has aud=clientId which matches our backend's JWT validation
+    return response.idToken || response.accessToken || null;
   } catch {
     // Silent acquisition failed — try popup
     try {
@@ -103,7 +105,7 @@ export async function getAccessToken(): Promise<string | null> {
         ...loginScopes,
         account,
       });
-      return response.accessToken || response.idToken || null;
+      return response.idToken || response.accessToken || null;
     } catch {
       return null;
     }
